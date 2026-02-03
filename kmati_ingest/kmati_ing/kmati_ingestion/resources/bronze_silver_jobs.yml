@@ -1,0 +1,20 @@
+resources:
+  jobs:
+    bronze_silver_job:
+      name: bronze_silver_pipeline
+
+      environments:
+        - environment_key: default
+          spec:
+            environment_version: "4"
+            dependencies:
+              - ../dist/kmati_ingestion-*.whl
+
+      tasks:
+        - task_key: run_pipeline
+          environment_key: default
+          python_wheel_task:
+            package_name: kmati_ingestion_etl
+            entry_point: runner.run
+            parameters:
+              - "/Workspace/Users/${workspace.current_user.userName}/kmati_ingestion_framework/configs/bronze_silver_config.yaml"

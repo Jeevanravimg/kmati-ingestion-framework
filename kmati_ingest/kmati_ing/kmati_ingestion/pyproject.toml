@@ -1,0 +1,55 @@
+[project]
+name = "kmati-ingestion"
+version = "0.1.0"
+description = "KMATI ingestion framework with extractor"
+authors = [
+    { name = "Patibandla Swaroopa", email = "swaroopapatibandla@gmail.com" }
+]
+requires-python = ">=3.10,<3.13"
+
+# -------------------------------------------------
+# Runtime dependencies
+# -------------------------------------------------
+dependencies = [
+    "pyyaml"
+]
+
+# -------------------------------------------------
+# ENTRY POINTS (CLI + Databricks)
+# -------------------------------------------------
+[project.scripts]
+run-extractor = "extractor.extractor:main"
+run-pipeline  = "kmati_ingestion_etl.runner:run"
+
+# -------------------------------------------------
+# HATCH BUILD CONFIG (IMPORTANT)
+# -------------------------------------------------
+[tool.hatch.build.targets.wheel]
+packages = [
+    "extractor",
+    "kmati_ingestion_etl",
+    "transformations"
+]
+
+# -------------------------------------------------
+# INCLUDE NON-PYTHON FILES
+# -------------------------------------------------
+[tool.hatch.build]
+include = [
+    "extractor/config.yaml",
+    "extractor/rclone.conf",
+    "configs/*.yaml"
+]
+
+# -------------------------------------------------
+# BUILD SYSTEM
+# -------------------------------------------------
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# -------------------------------------------------
+# FORMATTER
+# -------------------------------------------------
+[tool.black]
+line-length = 125
