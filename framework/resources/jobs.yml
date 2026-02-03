@@ -1,0 +1,55 @@
+# resources:
+#   jobs:
+#     kmati_medallion_job:
+#       name: kmati-medallion-job
+
+#       tasks:
+#         - task_key: run_pipeline
+#           notebook_task:
+#             notebook_path: notebooks/main_pipeline.py
+#             base_parameters:
+#               config_path: configs/new_config.yaml
+
+#           libraries:
+#             - whl: dist/kmati_medallion-0.1.0-py3-none-any.whl
+#######################################################################
+
+# resources:
+#   jobs:
+#     kmati_medallion_job:
+#       name: kmati-medallion-job
+
+#       environments:
+#         - environment_key: medallion-env
+#           spec:
+#             client: serverless
+#             dependencies:
+#               - dist/*.whl
+
+#       tasks:
+#         - task_key: run_pipeline
+#           environment_key: medallion-env
+#           notebook_task:
+#             notebook_path: notebooks/main_pipeline.py
+#             base_parameters:
+#               config_path: configs/new_config.yaml
+
+resources:
+  jobs:
+    kmati_medallion_job:
+      name: kmati-medallion-job
+
+      environments:
+        - environment_key: medallion-env
+          spec:
+            dependencies:
+              - dist/*.whl
+
+      tasks:
+        - task_key: run_pipeline
+          environment_key: medallion-env
+          notebook_task:
+            notebook_path: main_pipeline.py
+            base_parameters:
+              config_path: configs/new_config.yaml
+

@@ -1,0 +1,5 @@
+Metadata-Version: 2.4
+Name: kmati-medallion
+Version: 0.1.0
+Summary: KMATI Medallion Framework
+Requires-Python: >=3.9

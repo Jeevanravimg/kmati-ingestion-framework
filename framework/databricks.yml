@@ -1,0 +1,38 @@
+# bundle:
+#   name: kmati_medallion_bundle
+
+# include:
+#   - resources/*.yml
+
+# sync:
+#   include:
+#     - notebooks/**
+#     - src/**
+#     - configs/**
+#     - dist/**
+
+# targets:
+#   dev:
+#     mode: development
+#     default: true
+#     workspace:
+#       host: https://dbc-4ee2d87f-810b.cloud.databricks.com
+
+bundle:
+  name: kmati_medallion_bundle
+
+include:
+  - resources/*.yml
+
+sync:
+  include:
+    - configs/**
+    - dist/**
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      host: https://dbc-4ee2d87f-810b.cloud.databricks.com
+

@@ -1,0 +1,239 @@
+execution:
+  order:
+    - bronze
+    - silver
+
+assets:
+
+  bronze:
+
+    # ============================
+    # BRONZE – CUSTOMERS
+    # ============================
+    - name: bronze_customers
+      asset_type: local_file
+      file_format: csv
+      source_path: /Volumes/workspace/default/kmati_ingestion/customers/
+      target_path: /Volumes/workspace/default/kmati_frame_work_target/customers/
+      write_mode: overwrite
+      options:
+        header: true
+        infer_schema: false 
+      transformations:
+        normalize_column_names: snake_case
+        column_types:
+          customer_id: string
+          first_name: string
+          last_name: string
+          email_raw: string
+          phone_raw: string
+          birth_date_raw: string
+          created_at_raw: string
+        metadata:
+          add_ingest_ts: true
+          add_source_file: true
+          add_batch_id: true
+
+
+    # ============================
+    # BRONZE – ACCOUNTS
+    # ============================
+    - name: bronze_accounts
+      asset_type: local_file
+      file_format: csv
+      source_path: /Volumes/workspace/default/kmati_ingestion/accounts/
+      target_path: /Volumes/workspace/default/kmati_frame_work_target/accounts/
+      write_mode: overwrite
+      options:
+        header: true
+        infer_schema: false
+      transformations:
+        normalize_column_names: snake_case
+        column_types:
+          account_id: string
+          customer_id: string
+          balance_raw: string
+          currency_raw: string
+          opened_date_raw: string
+          status_raw: string
+        metadata:
+          add_ingest_ts: true
+          add_source_file: true
+          add_batch_id: true
+
+
+    # ============================
+    # BRONZE – TRANSACTIONS
+    # ============================
+    - name: bronze_transactions
+      asset_type: local_file
+      file_format: csv
+      source_path: /Volumes/workspace/default/kmati_ingestion/transactiion/
+      target_path: /Volumes/workspace/default/kmati_frame_work_target/transactions/
+      write_mode: overwrite
+      options:
+        header: true
+        infer_schema: false
+      transformations:
+        normalize_column_names: snake_case
+        column_types:
+          txn_id: string
+          account_id: string
+          txn_timestamp_raw: string
+          amount_raw: string
+          txn_type_raw: string
+          channel_raw: string
+        metadata:
+          add_ingest_ts: true
+          add_source_file: true
+          add_batch_id: true
+
+
+    # ============================
+    # BRONZE – MARKETING CALLS
+    # ============================
+    - name: bronze_marketing_calls
+      asset_type: local_file
+      file_format: csv
+      source_path: /Volumes/workspace/default/kmati_ingestion/marketing_calls/
+      target_path: /Volumes/workspace/default/kmati_frame_work_target/marketing_calls/
+      write_mode: overwrite
+      options:
+        header: true
+        infer_schema: false
+      transformations:
+        normalize_column_names: snake_case
+        column_types:
+          call_id: string
+          customer_id: string
+          age_raw: string
+          job_raw: string
+          marital_raw: string
+          education_raw: string
+          balance_raw: string
+        metadata:
+          add_ingest_ts: true
+          add_source_file: true
+          add_batch_id: true
+
+  silver:
+
+    # ============================
+    # SILVER – CUSTOMERS
+    # ============================
+    - name: silver_customers
+      asset_type: delta_table
+      source_path: /Volumes/workspace/default/kmati_frame_work_target/customers/
+      target_table: workspace.kmati_frame_work_target.customers
+      write_mode: overwrite
+      transformations:
+        - { order: 0, trim_strings: { enabled: true, columns: [first_name, last_name, email_raw] } }
+        - { order: 1, regex_clean: { enabled: true,
+            email_columns: [{ name: email_raw, out: email, trim: true, lowercase: true }],
+            number_columns: [] } }
+        - { order: 2, null_handling: { enabled: true, drop_if_null: [customer_id] } }
+        - { order: 3, duplicate_handling: { enabled: true, unique_keys: [customer_id] } }
+        - { order: 4, standardize_column_case: { enabled: true, format: snake_case } }
+        - { order: 5, surrogate_key: { enabled: true, column: customer_sk, method: uuid } }
+
+
+    # ============================
+    # SILVER – ACCOUNTS
+    # ============================
+    - name: silver_accounts
+      asset_type: delta_table
+      source_path: /Volumes/workspace/default/kmati_frame_work_target/accounts/
+      target_table: workspace.kmati_frame_work_target.accounts
+      write_mode: overwrite
+      transformations:
+        - { order: 0, trim_strings: { enabled: true,
+            columns: [balance_raw, currency_raw, opened_date_raw, status_raw] } }
+        - { order: 1, regex_clean: { enabled: true,
+            number_columns: [{ name: balance_raw, out: balance_clean,
+              pattern_remove: "[^0-9\\.\\-]", trim: true }],
+            email_columns: [] } }
+        - { order: 2, parse_numeric: { enabled: true,
+            columns: [{ name: balance_clean, out: balance, cast_type: double }] } }
+        - { order: 3, parse_date: { enabled: true,
+            columns: [{ name: opened_date_raw, out: opened_date,
+              formats: ["yyyy-MM-dd HH:mm:ss", "yyyy-MM-dd", "dd/MM/yyyy HH:mm:ss", "dd/MM/yyyy"] }] } }
+        - { order: 4, normalize_status: { enabled: true,
+            columns: [{ name: status_raw, out: status,
+              mapping: { a: "Active", active: "Active", closed: "Closed", c: "Closed" } }] } }
+        # ⬇️ ADD THIS NEW TRANSFORMATION FOR CURRENCY ⬇️
+        - { order: 5, normalize_status: { enabled: true,
+            columns: [{ name: currency_raw, out: currency,
+              mapping: { "usd": "USD", " Us Dollar": "USD","us dollar": "USD", "us dollars": "USD", "dollar": "USD" } }] } }
+        - { order: 6, null_handling: { enabled: true,
+            drop_if_null: [account_id, customer_id] } }
+        - { order: 7, duplicate_handling: { enabled: true, unique_keys: [account_id] } }
+        - { order: 8, standardize_column_case: { enabled: true, format: snake_case } }
+        - { order: 9, fill_missing: { enabled: true,
+            columns: [{ name: currency, value: "UNKNOWN" }] } }
+        - { order: 10, surrogate_key: { enabled: true, column: account_sk, method: uuid } }
+        - { order: 11, outlier_capping: { enabled: true,
+            columns: [{ name: balance, min: -50000, max: 10000000 }] } }
+
+    # ============================
+    # SILVER – TRANSACTIONS
+    # ============================
+    - name: silver_transactions
+      asset_type: delta_table
+      source_path: /Volumes/workspace/default/kmati_frame_work_target/transactions/
+      target_table: workspace.kmati_frame_work_target.transactions
+      write_mode: overwrite
+      transformations:
+        - { order: 0, trim_strings: { enabled: true,
+            columns: [txn_timestamp_raw, amount_raw, txn_type_raw, channel_raw] } }
+        - { order: 1, regex_clean: { enabled: true,
+            number_columns:
+              [{ name: amount_raw, out: amount_clean,
+                 pattern_remove: "[^0-9\\.\\-\\+]", trim: true }],
+            email_columns: [] } }
+        - { order: 2, parse_numeric: { enabled: true,
+            columns: [{ name: amount_clean, out: amount, cast_type: double }] } }
+        - { order: 3, parse_date: { enabled: true,
+            columns: [{ name: txn_timestamp_raw, out: txn_timestamp,
+              formats: ["yyyy-MM-dd HH:mm:ss", "dd/MM/yyyy HH:mm:ss", "MM/dd/yyyy HH:mm:ss"] }] } }
+        - { order: 4, normalize_status: { enabled: true,
+            columns: [{ name: txn_type_raw, out: txn_type,
+              mapping: { cr: credit, crdt: credit, credit: credit,
+                debit: debit, db: debit } }] } }
+        - { order: 5, null_handling: { enabled: true,
+            drop_if_null: [txn_id, account_id] } }
+        - { order: 6, duplicate_handling: { enabled: true,
+            unique_keys: [txn_id] } }
+        - { order: 7, surrogate_key: { enabled: true,
+            column: txn_sk, method: uuid } }
+
+
+    # ============================
+    # SILVER – MARKETING CALLS
+    # ============================
+    - name: silver_marketing_calls
+      asset_type: delta_table
+      source_path: /Volumes/workspace/default/kmati_frame_work_target/marketing_calls/
+      target_table: workspace.kmati_frame_work_target.marketing_calls
+      write_mode: overwrite
+      transformations:
+        - { order: 0, trim_strings: { enabled: true,
+            columns: [age_raw, job_raw, marital_raw, education_raw, balance_raw] } }
+        - { order: 1, regex_clean: { enabled: true,
+            number_columns:
+              [{ name: age_raw, out: age_clean, pattern_remove: "[^0-9]", trim: true },
+               { name: balance_raw, out: balance_clean, pattern_remove: "[^0-9\\.\\-]", trim: true }],
+            email_columns: [] } }
+        - { order: 2, parse_numeric: { enabled: true,
+            columns:
+              [{ name: age_clean, out: age, cast_type: int },
+               { name: balance_clean, out: balance, cast_type: double }] } }
+        - { order: 3, null_handling: { enabled: true,
+            drop_if_null: [call_id, customer_id] } }
+        - { order: 4, duplicate_handling: { enabled: true,
+            unique_keys: [call_id] } }
+        - { order: 5, fill_missing: { enabled: true,
+            columns:
+              [{ name: job_raw, value: "Unknown" },
+               { name: marital_raw, value: "Unknown" }] } }
+        - { order: 6, surrogate_key: { enabled: true,
+            column: call_sk, method: uuid } }
